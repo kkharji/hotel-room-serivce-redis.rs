@@ -11,7 +11,7 @@ struct ReceptionConfig {}
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
-    pretty_env_logger::init();
+    logger::init("reception");
 
     let _config: ReceptionConfig = argh::from_env();
     let mut rng = rand::thread_rng();
@@ -28,11 +28,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         job.room = rand::Rng::gen_range(&mut rng, 100..500);
 
         let id: String = con.xadd_map(proto::JOB_TOPIC, "*", job.xadd_map()?).await?;
+        let JobEvent { room, data, .. } = job;
 
-        log::info!("-------------------------------------------------");
-        log::info!("- Created Job: {id}");
-        log::info!(r#" {job:?}"#);
-        log::info!("-------------------------------------------------");
+        log::info!(target: &id, "- Created {data:?} for room {room:?}",);
 
         tokio::time::sleep(Duration::new(rand::Rng::gen_range(&mut rng, 5..10), 0)).await;
     }

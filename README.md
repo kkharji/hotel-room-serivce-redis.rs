@@ -4,7 +4,7 @@ Experimental use of rust stream as message broker between two multi-instance mic
 
 ## Code structure
 
-- [Protocol Library (proto)](./proto): Shared cargo package that defines the event and helper library to
+- [Protocol Library (proto)]: Shared cargo package that defines the event and helper library to
   consume and process events.
 - [Reception Service (reception)]: Producer that produces event.
 - [Staff Service (staff)]: Consumer of events produced by reception Service.
@@ -31,6 +31,6 @@ pnpm run dev:reception
 
 - [ ] Fix auto-claim handling
 
-[Staff Service (staff)]: ./staff
-[Protocol Library (proto)]: ./proto
-[Reception Service (reception)]: ./reception
+[Staff Service (staff)]: ./services/staff
+[Protocol Library (proto)]: ./services/proto
+[Reception Service (reception)]: ./services/reception

@@ -38,14 +38,14 @@ impl StreamConsumer<JobEvent> for JobEventConsumer {
     ) -> Result<(), TaskError<Self::Error>> {
         let name = ctx.consumer_id();
         let JobEvent { status, room, data } = event;
-        log::info!("🚕 {id}: {name} received request to handle {data:?} for room {room:?}.");
+        log::info!(target: id, "🚕 {name} received new request");
         tokio::time::sleep(Duration::new(1, 0)).await;
         if rnd_sleep(name, id).await == 5 {
-            log::info!("❌ {id}: {name} was unable to handle request.");
+            log::info!(target: id, "❌ {id}: {name} unable to handle request.");
             Err(TaskError::SkipAcknowledgement)
         } else {
-            log::info!("✅ {id}: {name} handled {data:?} for room {room:?}.");
-            log::info!("🚶 {id}: {name} returning to station.");
+            log::info!(target: id, "✅ {name} handled {data:?} for room {room:?}.");
+            log::info!(target: id, "🚶 {name} returning to station.");
             tokio::time::sleep(Duration::new(3, 0)).await;
 
             Ok(())
@@ -56,7 +56,7 @@ impl StreamConsumer<JobEvent> for JobEventConsumer {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
     let StaffConfig { name } = argh::from_env();
-    pretty_env_logger::init();
+    logger::init("staff");
 
     log::info!("Init {name:?}");
     let ctx = Context::new(proto::JOB_TOPIC, "staff", name);
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn rnd_sleep(name: &str, id: &str) -> u64 {
     let sec = rand::thread_rng().gen_range(5..10);
-    println!("🕹️  {id}: {name} hanlding request ...");
+    log::info!(target: id, "🕹️  {name} hanlding request ...");
     tokio::time::sleep(Duration::new(sec, 0)).await;
     sec
 }

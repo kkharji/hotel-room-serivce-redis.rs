@@ -5,8 +5,10 @@ members = [ "services/*", "pkgs/*" ]
 anyhow             = { version = "1.0.68" }
 argh               = { version = "0.1.10" }
 async-trait        = { version = "0.1.64" }
+chrono             = { version = "0.4.22", features = ["serde"] }
+fern               = { version = "0.6.1", features = ["colored"] }
 log                = { version = "0.4.14" }
-pretty_env_logger  = { version = "0.4.0" }
+logger             = { path = "pkgs/logger/" }
 proto              = { path = "pkgs/proto" }
 rand               = { version = "0.8.5" }
 redis              = { version = "0.22.1", features = ["tokio-comp", "aio"] }
@@ -18,3 +20,4 @@ serde_json         = { version = "1.0.91" }
 tap                = { version = "1.0.1" }
 thiserror          = { version = "1.0.38" }
 tokio              = { version = "1.25", features = ["full"] }
+
