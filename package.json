@@ -1,0 +1,12 @@
+{
+  "name": "workspace",
+  "scripts": {
+    "cargo": "./scripts/cargo",
+    "staff": "./scripts/staff",
+    "dev": "docker-compose up -d && pnpm -r --parallel --if-present --stream --aggregate-output dev",
+    "build": "pnpm -r --parallel --if-present --stream --aggregate-output serve",
+    "test": "pnpm -r --parallel --if-present --stream --aggregate-output test",
+    "dev:reception": "pnpm -F=reception dev",
+    "dev:staff": "pnpm -F=staff dev"
+  }
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+declare -A USAGE
+
+if [[ $(uname -s) == "Darwin" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+else
+  ROOT="$(dirname $(dirname "$(readlink -f "$0")"))"
+fi
+
+. $ROOT/scripts/args
+PROJECT_NAME="$(basename $ROOT)"
+
+DESCRIPTION="Watch build the whole workspace or specific list of packages:
+Example:
+  Run up for redis:
+    compose up redis
+
+  Run up for redis in dev mode:
+    compose -m prod up redis"
+KEYWORDS=("-m|--mode")
+REQUIRED=("cmd")
+USAGE['-m']="mode: dev/test/prod"
+USAGE[cmd]="docker compose command to run"
+
+# Parse all arguments in "$@" and exit if there are parsing errors
+parse_args "$@" || exit $?
+set_trap 1 2
+
+mode=${KW_ARGS["-m"]:-${MODE:-dev}}
+cmd=${NAMED_ARGS["cmd"]}
+echo $deps
+
+if [ -x "$(command -v podman)" ]; then
+  export DOCKER_NETWORK_MODE=slirp4netns:port_handler=slirp4netns,enable_ipv6=true,allow_host_loopback=true
+  export DOCKER_DOMAIN_NAME=host.containers.internal
+else
+  export DOCKER_DOMAIN_NAME=host.docker.internal
+fi
+
+export DOCKER_GETAWAY="${DOCKER_DOMAIN_NAME}:host-gateway"
+
+# docker-compose --profile=$mode -p=$PROJECT_NAME_$mode --env-file=.env.$mode $cmd ${ARGS[*]}
+docker-compose $cmd ${ARGS[*]}

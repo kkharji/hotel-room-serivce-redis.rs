@@ -1,0 +1,8 @@
+*.bak
+*.swp
+*.tmp
+.DS_Store
+node_modules/
+venv/
+.idea/
+*.pyc

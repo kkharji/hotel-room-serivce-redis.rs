@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# Wrapper for cargo watch
+if [[ $(uname -s) == "Darwin" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+else
+  ROOT="$(dirname $(dirname "$(readlink -f "$0")"))"
+fi
+
+cd $ROOT;
+
+if [ $# -eq 0 ]; then
+  echo "No arguments supplied"
+  $ROOT/scripts/cargo staff
+else
+  $ROOT/scripts/cargo staff -a "--name $1"
+fi

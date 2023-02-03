@@ -1,0 +1,6 @@
+{
+  "name": "reception",
+  "scripts": {
+    "dev": "pnpm -w cargo reception"
+  }
+}

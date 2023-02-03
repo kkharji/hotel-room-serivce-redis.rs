@@ -1,0 +1,26 @@
+[package]
+name = "proto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow             = { workspace = true }
+async-trait        = { workspace = true }
+backoff            = { version = "0.4.0", features = ["tokio"] }
+env-url            = { version = "2.0.3" }
+futures            = { version = "0.3.26" }
+log                = { workspace = true }
+rand               = { workspace = true }
+redis              = { workspace = true }
+redis-swapplex     = { workspace = true }
+serde              = { workspace = true }
+serde-aux          = { workspace = true }
+serde_json         = { workspace = true }
+serde_with         = { version = "2.2.0", features = ["json"] }
+tap                = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true, features = ["macros", "signal"] }
+tokio-util         = { version = "0.7.4" }
+
+[dev-dependencies]
+decimal            = { version = "2.1.0" }

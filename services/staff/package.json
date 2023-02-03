@@ -1,0 +1,6 @@
+{
+  "name": "staff",
+  "scripts": {
+    "dev": "pnpm -w staff"
+  }
+}

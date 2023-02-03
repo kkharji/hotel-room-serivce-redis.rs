@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+# Wrapper for cargo watch
+if [[ $(uname -s) == "Darwin" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+else
+  ROOT="$(dirname $(dirname "$(readlink -f "$0")"))"
+fi
+
+SCRIPTS=$ROOT/scripts
+
+export RUST_LOG=${RUST_LOG:-reception=debug,staff=debug}
+
+DESCRIPTION="Start develop a target:
+- Ensures all required services exists.
+- Ensures dependencies are watched."
+
+REQUIRED=("target")
+KEYWORDS=("-c|--command" "-m|--mode" "-a|--args")
+
+declare -A USAGE
+USAGE[target]="Target to develop"
+USAGE['-c']="Cargo command to run: default 'run'"
+USAGE['-a']="args to pass run or given command"
+USAGE['-m']="Environment mode to run for"
+
+declare -A WATCH_DIRS
+WATCH_DIRS['common']="pkgs/proto Cargo.toml"
+WATCH_DIRS['staff']="services/staff services/reception"
+WATCH_DIRS['reception']="services/reception"
+
+declare -A DOCKER_SERIVCES
+
+DOCKER_SERIVCES['staff']="redis"
+DOCKER_SERIVCES['reception']="redis"
+
+declare -A DOCKER_SERIVCES_PORTS
+DOCKER_SERIVCES_PORTS['redis']=6379
+
+# Parse all arguments in "$@" and exit if there are parsing errors
+. $SCRIPTS/args
+parse_args "$@" || exit $?; set_trap 1 2
+
+export MODE=${KW_ARGS["-m"]:-${MODE:-dev}}
+target=${NAMED_ARGS["target"]}
+cmd=${KW_ARGS["-c"]:-run}
+args=${KW_ARGS["-a"]}
+
+# set -a; source $ROOT/.env.$MODE; set +a
+read -a common_dirs <<< ${WATCH_DIRS['common']}
+read -a dirs <<< ${WATCH_DIRS[$target]}
+read -a deps <<< ${DOCKER_SERIVCES[$target]}
+
+
+if [[ $(uname -s) == "Darwin" ]]; then
+  for dep in "${deps[@]}"; do
+    port=${DOCKER_SERIVCES_PORTS[$dep]}
+    if ! nc -z localhost $port  &> /dev/null; then
+      printf "
+----------------------------------
+Ensuring ${dep}_${MODE} at ${port}
+----------------------------------
+"
+      $($SCRIPTS/compose -m $MODE up $dep --detach --quiet-pull > /dev/null 2>&1)
+      while ! nc -z localhost $port &> /dev/null; do
+         sleep 1
+      done
+    fi
+  done
+fi
+
+if [[ $args != "" ]]; then
+  watchexec -rc ${dirs[@]/#/-w } ${common_dirs[@]/#/-w } --  cargo $cmd -p $target -- $args
+else
+  watchexec -rc ${dirs[@]/#/-w } ${common_dirs[@]/#/-w } --  cargo $cmd -p $target
+fi

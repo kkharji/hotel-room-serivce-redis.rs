@@ -1,0 +1,13 @@
+ports:
+  - port: 8001
+    onOpen: open-preview
+  - port: 6379
+    onOpen: ignore
+
+tasks:
+  - name: Reception
+    init: pnpm dev:reception
+    openMode: split-left
+  - name: Staff/John
+    init: pnpm dev:staff John
+    openMode: split-right
