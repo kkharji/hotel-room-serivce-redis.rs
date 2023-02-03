@@ -776,6 +776,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argh",
+ "async-trait",
  "log",
  "logger",
  "proto",
@@ -988,6 +989,7 @@ dependencies = [
  "rand",
  "redis",
  "redis-graph",
+ "redis-swapplex",
  "serde",
  "serde_json",
  "tokio",

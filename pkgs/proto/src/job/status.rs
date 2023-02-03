@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum JobEventStatus {
     #[default]
     Requested,
-    Pending,
     Completed,
-    Canceled,
 }
 
 impl JobEventStatus {
@@ -19,27 +17,11 @@ impl JobEventStatus {
         matches!(self, Self::Requested)
     }
 
-    /// Returns `true` if the job event status is [`Pending`].
-    ///
-    /// [`Pending`]: JobEventStatus::Pending
-    #[must_use]
-    pub fn is_pending(&self) -> bool {
-        matches!(self, Self::Pending)
-    }
-
     /// Returns `true` if the job event status is [`Completed`].
     ///
     /// [`Completed`]: JobEventStatus::Completed
     #[must_use]
     pub fn is_completed(&self) -> bool {
         matches!(self, Self::Completed)
-    }
-
-    /// Returns `true` if the job event status is [`Canceled`].
-    ///
-    /// [`Canceled`]: JobEventStatus::Canceled
-    #[must_use]
-    pub fn is_canceled(&self) -> bool {
-        matches!(self, Self::Canceled)
     }
 }

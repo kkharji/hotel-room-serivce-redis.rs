@@ -1,10 +1,11 @@
 #![allow(unused)]
 use argh::FromArgs;
-use proto::JobEvent;
 use proto::{ClaimMode, Context, DeliveryStatus, EventProcessor, StreamConsumer, TaskError};
+use proto::{JobEvent, JobEventStatus, StreamEntry};
 use rand::{seq::SliceRandom, Rng};
 use redis::streams::{StreamRangeReply, StreamReadOptions, StreamReadReply};
-use redis::{from_redis_value, AsyncCommands, Client};
+use redis::{from_redis_value, AsyncCommands, Client, RedisError};
+use redis_swapplex::get_connection;
 use std::{error::Error, time::Duration};
 use tokio::time::sleep;
 
@@ -38,16 +39,34 @@ impl StreamConsumer<JobEvent> for JobEventConsumer {
     ) -> Result<(), TaskError<Self::Error>> {
         let name = ctx.consumer_id();
         let JobEvent { status, room, data } = event;
+        if status.is_completed() {
+            log::debug!(target: id, "skipping completed event");
+            return Ok(());
+        }
+
         log::info!(target: id, "🚕 {name} received new request");
+
         tokio::time::sleep(Duration::new(1, 0)).await;
-        if rnd_sleep(name, id).await == 5 {
-            log::info!(target: id, "❌ {id}: {name} unable to handle request.");
+        let skip = rnd_sleep(name, id).await == 5;
+        if !skip {
+            log::info!(target: id, "✅ {name} handled {data:?} for room {room:?}.");
+            let mut update = event.clone();
+            update.status = JobEventStatus::Completed;
+            tokio::spawn(async move {
+                let id: String = get_connection()
+                    .xadd_map(proto::JOB_TOPIC, "*", update.xadd_map()?)
+                    .await?;
+                Ok::<_, RedisError>(())
+            });
+        }
+
+        log::info!(target: id, "🚶 {name} returning to station.");
+        tokio::time::sleep(Duration::new(3, 0)).await;
+        log::info!(target: id, "🚶 {name} Ready.");
+
+        if skip {
             Err(TaskError::SkipAcknowledgement)
         } else {
-            log::info!(target: id, "✅ {name} handled {data:?} for room {room:?}.");
-            log::info!(target: id, "🚶 {name} returning to station.");
-            tokio::time::sleep(Duration::new(3, 0)).await;
-
             Ok(())
         }
     }
