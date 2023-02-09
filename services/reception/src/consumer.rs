@@ -1,46 +1,25 @@
 use crate::ReceptionConfig;
-use proto::{ClaimMode, Context, DeliveryStatus, EventProcessor, StreamConsumer, TaskError};
+use futures::TryStreamExt;
 use proto::{JobEvent, JobEventStatus};
-use std::{error::Error, time::Duration};
+use rsc::RSClient;
+use std::error::Error;
 
-#[derive(Default)]
-pub struct JobEventConsumer {}
+pub async fn run(client: &RSClient, _config: &ReceptionConfig) -> Result<(), Box<dyn Error>> {
+    client.ensure_events([proto::JOB_TOPIC].iter()).await?;
 
-#[async_trait::async_trait]
-impl StreamConsumer<JobEvent> for JobEventConsumer {
-    const XREAD_BLOCK_TIME: Duration = Duration::from_secs(5);
-    const BATCH_SIZE: usize = 5;
-    const CONCURRENCY: usize = 5;
+    let mut stream = client.consume(proto::JOB_TOPIC);
 
-    type Entry = JobEvent;
-    type Error = anyhow::Error;
-    type Data = JobEvent;
-
-    async fn process_event(
-        &self,
-        _ctx: &Context,
-        id: &str,
-        event: &JobEvent,
-        _status: &DeliveryStatus,
-    ) -> Result<(), TaskError<Self::Error>> {
-        let JobEvent { status, room, data } = event;
+    while let Some(message) = stream.try_next().await? {
+        let id = &message.id.to_string();
+        let event: JobEvent = message.data()?;
+        let JobEvent { status, room, data } = &event;
         match status {
-            JobEventStatus::Requested => {
-                log::info!(target: id, "Skipped");
-            }
+            JobEventStatus::Requested => {}
             JobEventStatus::Completed => {
                 log::info!(target: &id, "✅ Handled {data:?} for room {room:?}",);
             }
         }
-        Ok(())
+        message.ack().await?;
     }
-}
-
-pub async fn run(config: &ReceptionConfig) -> Result<(), Box<dyn Error>> {
-    let ctx = Context::new(proto::JOB_TOPIC, "manager", config.name.clone());
-    let cmode = ClaimMode::NewOnly;
-    let mut reactor = <EventProcessor<JobEventConsumer, JobEvent>>::new(ctx);
-
-    reactor.start(cmode).await?;
     Ok(())
 }

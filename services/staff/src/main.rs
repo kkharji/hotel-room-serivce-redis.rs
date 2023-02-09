@@ -1,13 +1,8 @@
-#![allow(unused)]
 use argh::FromArgs;
-use proto::{ClaimMode, Context, DeliveryStatus, EventProcessor, StreamConsumer, TaskError};
-use proto::{JobEvent, JobEventStatus, StreamEntry};
-use rand::{seq::SliceRandom, Rng};
-use redis::streams::{StreamRangeReply, StreamReadOptions, StreamReadReply};
-use redis::{from_redis_value, AsyncCommands, Client, RedisError};
-use redis_swapplex::get_connection;
+use futures::TryStreamExt;
+use proto::{JobEvent, JobEventStatus};
+use rand::Rng;
 use std::{error::Error, time::Duration};
-use tokio::time::sleep;
 
 #[derive(FromArgs)]
 /// Reach new heights.
@@ -17,46 +12,56 @@ struct StaffConfig {
     name: Option<String>,
 }
 
-#[derive(Default)]
-pub struct JobEventConsumer {}
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn Error>> {
+    logger::init("staff");
 
-#[async_trait::async_trait]
-impl StreamConsumer<JobEvent> for JobEventConsumer {
-    const XREAD_BLOCK_TIME: Duration = Duration::from_secs(5);
-    const BATCH_SIZE: usize = 0;
-    const CONCURRENCY: usize = 0;
+    let StaffConfig { name } = argh::from_env();
 
-    type Entry = JobEvent;
-    type Error = anyhow::Error;
-    type Data = JobEvent;
+    log::info!("Init {name:?}");
 
-    async fn process_event(
-        &self,
-        ctx: &Context,
-        id: &str,
-        event: &JobEvent,
-        status: &DeliveryStatus,
-    ) -> Result<(), TaskError<Self::Error>> {
-        let name = ctx.consumer_id();
-        let JobEvent { status, room, data } = event;
+    let client = rsc::RSClient::new(rsc::RSConfig {
+        stream_group_name: "Staff".into(),
+        stream_consumer_name: name.clone(),
+        stream_autoclaim_block_interval: 5000,
+        stream_autoclaim_min_idle_time: 5000,
+        ..Default::default()
+    })
+    .await?;
+
+    let name = name.unwrap_or_else(|| "StaffMemeber".into());
+
+    client.ensure_events([proto::JOB_TOPIC].iter()).await?;
+    let mut stream = client.consume(proto::JOB_TOPIC);
+
+    while let Some(message) = stream.try_next().await? {
+        let id = &message.id.to_string();
+        let event: JobEvent = message.data()?;
+        let JobEvent { status, room, data } = &event;
+
         if status.is_completed() {
-            log::debug!(target: id, "skipping completed event");
-            return Ok(());
+            log::info!(target: id, "skipping completed event");
+            message.ack().await?;
+            continue;
         }
 
         log::info!(target: id, "🚕 {name} received new request");
 
         tokio::time::sleep(Duration::new(1, 0)).await;
-        let skip = rnd_sleep(name, id).await == 5;
+
+        let skip = rnd_sleep(&name, id).await == 5;
+
         if !skip {
             log::info!(target: id, "✅ {name} handled {data:?} for room {room:?}.");
             let mut update = event.clone();
             update.status = JobEventStatus::Completed;
+            message.ack().await?;
+
+            let client = client.clone();
+
             tokio::spawn(async move {
-                let id: String = get_connection()
-                    .xadd_map(proto::JOB_TOPIC, "*", update.xadd_map()?)
-                    .await?;
-                Ok::<_, RedisError>(())
+                let _id = client.publish(proto::JOB_TOPIC, &update).await?;
+                Ok::<_, rsc::RSError>(())
             });
         }
 
@@ -64,25 +69,10 @@ impl StreamConsumer<JobEvent> for JobEventConsumer {
         tokio::time::sleep(Duration::new(3, 0)).await;
         log::info!(target: id, "🚶 {name} Ready.");
 
-        if skip {
-            Err(TaskError::SkipAcknowledgement)
-        } else {
-            Ok(())
+        if !skip {
+            message.ack().await?;
         }
     }
-}
-
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let StaffConfig { name } = argh::from_env();
-    logger::init("staff");
-
-    log::info!("Init {name:?}");
-    let ctx = Context::new(proto::JOB_TOPIC, "staff", name);
-    let cmode = ClaimMode::Autoclaim(Duration::new(1, 0));
-    let mut reactor = <EventProcessor<JobEventConsumer, JobEvent>>::new(ctx);
-
-    reactor.start(cmode).await?;
 
     Ok(())
 }

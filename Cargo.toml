@@ -7,6 +7,7 @@ argh               = { version = "0.1.10" }
 async-trait        = { version = "0.1.64" }
 chrono             = { version = "0.4.22", features = ["serde"] }
 fern               = { version = "0.6.1", features = ["colored"] }
+futures            = { version = "0.3.26" }
 log                = { version = "0.4.14" }
 logger             = { path = "pkgs/logger/" }
 proto              = { path = "pkgs/proto" }
@@ -14,6 +15,7 @@ rand               = { version = "0.8.5" }
 redis              = { version = "0.22.1", features = ["tokio-comp", "aio"] }
 redis-graph        = { version = "0.4.3" }
 redis-swapplex     = { version = "0.4.0" }
+rsc                = { path = "../rsc" }
 serde              = { version = "1.0.152", features = ["derive"] }
 serde-aux          = { version = "4.1.2" }
 serde_json         = { version = "1.0.91" }

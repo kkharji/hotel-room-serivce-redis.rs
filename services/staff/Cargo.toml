@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow             = { workspace = true }
+futures            = { workspace = true }
 argh               = { workspace = true }
 async-trait        = { workspace = true }
 log                = { workspace = true }
@@ -19,3 +20,4 @@ redis-swapplex     = { workspace = true }
 serde              = { workspace = true }
 serde_json         = { workspace = true }
 tokio              = { workspace = true }
+rsc                = { workspace = true }
