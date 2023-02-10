@@ -24,13 +24,10 @@ pnpm run dev:reception
 ## How it works
 
 - [Reception Service (reception)] auto generated event on interval (5-10 seconds) and pushes to redis stream with id `jobs`.
-- [Staff Service (reception)] spawn configurable cocurrent consumers to consume unseen or non acknowledge events.
+- [Staff Service (staff)] spawn configurable cocurrent consumers to consume unseen or non acknowledge events.
 
-
-## TODO:
-
-- [ ] Fix auto-claim handling
 
 [Staff Service (staff)]: ./services/staff
 [Protocol Library (proto)]: ./services/proto
 [Reception Service (reception)]: ./services/reception
+[docker-compose.yml]: ./docker-compose.yml
